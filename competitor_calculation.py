@@ -1,37 +1,38 @@
-from google_similarity import PMID, NGD, number_of_results
+from google_similarity import PMID, NGD
 import pickle
 import pandas as pd
+import math
+
+from argparse import ArgumentParser
 
 
 if __name__ == '__main__':
 
-    all_companies_frequencies = dict()
-    for i in range(9):
-        s = i*200
-        e = s + 200
-        f = open(f"company_frequencies_{s}_{e}_2.pickle", "rb")
-        data = pickle.load(f)
-        all_companies_frequencies = {**data, **all_companies_frequencies}
-    print(len(all_companies_frequencies.items()))
+    parser = ArgumentParser()
+    parser.add_argument("-pcf", "--path_to_company_frequencies",
+                       default="company_frequencies_google_api_example.pickle")
+    parser.add_argument("-ppf", "--path_to_pair_frequencies",
+                        default="competitor_frequency_google_api_example.pickle")
+    args = parser.parse_args()
 
-    all_competitors_frequencies = dict()
-    for i in range(5):
-        s = i * 200
-        e = s + 200
-        f = open(f"competitor_frequency_{s}_{e}.pickle", "rb")
-        data = pickle.load(f)
-        all_competitors_frequencies = {**data, **all_competitors_frequencies}
-    print(len(all_competitors_frequencies.items()))
+    with open(args.path_to_company_frequencies, "rb") as f:
+        all_companies_frequencies = pickle.load(f)
 
-    D = number_of_results("the")
-    print(D)
+    with open(args.path_to_pair_frequencies, "rb") as f:
+        all_competitors_frequencies = pickle.load(f)
+
+    D = 49490000000.0
 
     df_dict = {"comp1": [], "comp2": [], "comp1 name": [], "comp2 name": [], "google similarity score": [],
-               "document-based PMI": []}
+               "comp1 frequency": [], "comp2 frequency": [], "pair frequency": []}
 
     for (comp1, comp2), d_w1_dw2 in all_competitors_frequencies.items():
         comp1_name, d_w1 = all_companies_frequencies[comp1]
         comp2_name, d_w2 = all_companies_frequencies[comp2]
+
+        df_dict["comp1 frequency"].append(d_w1)
+        df_dict["comp2 frequency"].append(d_w2)
+        df_dict["pair frequency"].append(d_w1_dw2)
 
         df_dict["comp1"].append(comp1)
         df_dict["comp2"].append(comp2)
@@ -39,10 +40,8 @@ if __name__ == '__main__':
         df_dict["comp2 name"].append(comp2_name)
 
         google_score = NGD(d_w1, d_w2, d_w1_dw2, D)
-        pmi = PMID(d_w1, d_w2, d_w1_dw2, D)
 
         df_dict["google similarity score"].append(google_score)
-        df_dict["document-based PMI"].append(pmi)
 
     df = pd.DataFrame.from_dict(df_dict)
-    df.to_csv("competitor_scores_pmi_and_google.csv")
+    df.to_csv("competitor_scores_pmi_and_gsd_example.csv")
